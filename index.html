@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voltage Drop Calculator — NEC Wire Sizing Tool</title>
+<meta name="description" content="Free voltage drop calculator for electricians and contractors. Check any circuit run against NEC's 3% and 5% recommended limits by wire gauge, distance, and load.">
+<meta name="keywords" content="voltage drop calculator, wire gauge calculator, NEC voltage drop, electrical wire sizing, circular mils calculator">
+<link rel="canonical" href="https://yourdomain.com/">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Voltage Drop Calculator — NEC Wire Sizing Tool">
+<meta property="og:description" content="Check any circuit run against NEC's 3% and 5% recommended voltage drop limits, by wire gauge, distance, and load.">
+<meta property="og:url" content="https://yourdomain.com/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Voltage Drop Calculator — NEC Wire Sizing Tool">
+<meta name="twitter:description" content="Free tool to check voltage drop on any circuit run against NEC limits.">
+
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1A1D1F;
+    --panel: #24282B;
+    --panel-raised: #2D3134;
+    --line: #3A3F42;
+    --copper: #C77B4A;
+    --copper-bright: #E0925E;
+    --amber: #F5A623;
+    --green: #4CAF80;
+    --red: #E0654F;
+    --text: #EDEBE6;
+    --text-dim: #9A9E9F;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 0 0 3rem;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Copper wire strip at very top */
+  .wire-strip {
+    height: 6px;
+    background: repeating-linear-gradient(90deg, var(--copper) 0px, var(--copper-bright) 40px, var(--copper) 80px);
+  }
+
+  header {
+    padding: 2rem 1.25rem 1.5rem;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 2.1rem;
+    letter-spacing: 0.01em;
+    line-height: 1.05;
+    color: var(--text);
+  }
+
+  .tagline {
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    margin-top: 0.4rem;
+    max-width: 46ch;
+  }
+
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .field.full { grid-column: 1 / -1; }
+
+  .field label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  select, input[type="number"] {
+    background: var(--panel-raised);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.7rem 0.75rem;
+    width: 100%;
+    appearance: none;
+  }
+
+  select:focus, input:focus {
+    outline: none;
+    border-color: var(--copper);
+  }
+
+  .unit-input {
+    position: relative;
+  }
+  .unit-input span {
+    position: absolute;
+    right: 0.8rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    font-weight: 500;
+    pointer-events: none;
+  }
+
+  .phase-toggle {
+    display: flex;
+    background: var(--panel-raised);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .phase-toggle button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.55rem;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .phase-toggle button.active {
+    background: var(--copper);
+    color: #1A1015;
+  }
+
+  /* Result panel */
+  .result-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.5rem 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-panel.pass { border-color: var(--green); }
+  .result-panel.warn { border-color: var(--amber); }
+  .result-panel.fail { border-color: var(--red); }
+
+  .result-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .result-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-weight: 500;
+    text-transform: none;
+  }
+
+  .result-number {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 3.4rem;
+    line-height: 1;
+    margin-top: 0.3rem;
+  }
+
+  .result-number .unit {
+    font-size: 1.6rem;
+    color: var(--text-dim);
+    font-weight: 600;
+    margin-left: 0.3rem;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .badge.pass { background: rgba(76, 175, 128, 0.15); color: var(--green); }
+  .badge.warn { background: rgba(245, 166, 35, 0.15); color: var(--amber); }
+  .badge.fail { background: rgba(224, 101, 79, 0.15); color: var(--red); }
+
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  .result-detail {
+    margin-top: 1.1rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+    font-size: 0.9rem;
+  }
+
+  .result-detail div span {
+    display: block;
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .result-detail div strong {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .suggestion {
+    margin-top: 1rem;
+    padding: 0.8rem 0.9rem;
+    background: var(--panel-raised);
+    border-radius: 7px;
+    font-size: 0.88rem;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .suggestion strong { color: var(--copper-bright); }
+
+  /* Reference table */
+  details.panel {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  details summary {
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  details summary::-webkit-details-marker { display: none; }
+
+  .chevron {
+    color: var(--text-dim);
+    transition: transform 0.15s ease;
+    font-size: 0.85rem;
+  }
+
+  details[open] .chevron { transform: rotate(180deg); }
+
+  .table-wrap {
+    padding: 0 1.25rem 1.1rem;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  th {
+    text-align: left;
+    color: var(--text-dim);
+    font-weight: 500;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.78rem;
+  }
+
+  td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid var(--line);
+    font-weight: 500;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  footer {
+    max-width: 640px;
+    margin: 1.5rem auto 0;
+    padding: 0 1.25rem;
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 420px) {
+    .result-number { font-size: 2.7rem; }
+    .field-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wire-strip"></div>
+
+<header>
+  <h1>Voltage Drop Calculator</h1>
+  <p class="tagline">Check a circuit run against NEC's recommended voltage drop limits, sized by wire gauge, distance, and load.</p>
+</header>
+
+<main>
+
+  <div class="panel">
+    <div class="field-grid">
+
+      <div class="field full">
+        <label for="phase">Circuit type</label>
+        <div class="phase-toggle" id="phaseToggle">
+          <button type="button" data-phase="1" class="active">Single-phase</button>
+          <button type="button" data-phase="3">Three-phase</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="material">Conductor</label>
+        <select id="material">
+          <option value="copper">Copper</option>
+          <option value="aluminum">Aluminum</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="gauge">Wire size (AWG / kcmil)</label>
+        <select id="gauge"></select>
+      </div>
+
+      <div class="field">
+        <label for="voltage">System voltage</label>
+        <div class="unit-input">
+          <input type="number" id="voltage" value="120" min="1">
+          <span>V</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="amps">Load current</label>
+        <div class="unit-input">
+          <input type="number" id="amps" value="20" min="0" step="0.1">
+          <span>A</span>
+        </div>
+      </div>
+
+      <div class="field full">
+        <label for="distance">One-way distance to load</label>
+        <div class="unit-input">
+          <input type="number" id="distance" value="100" min="0" step="1">
+          <span>ft</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="result-panel" id="resultPanel">
+    <div class="result-top">
+      <div>
+        <div class="result-label">Voltage drop</div>
+        <div class="result-number"><span id="vdPercent">0.0</span><span class="unit">%</span></div>
+      </div>
+      <div class="badge" id="badge"><span class="dot"></span><span id="badgeText">—</span></div>
+    </div>
+
+    <div class="result-detail">
+      <div>
+        <span>Voltage drop</span>
+        <strong id="vdVolts">0.0 V</strong>
+      </div>
+      <div>
+        <span>Voltage at load</span>
+        <strong id="vAtLoad">0.0 V</strong>
+      </div>
+    </div>
+
+    <div class="suggestion" id="suggestion"></div>
+  </div>
+
+  <details class="panel">
+    <summary>Reference: NEC recommended limits <span class="chevron">▾</span></summary>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Circuit</th><th>Recommended max VD</th></tr>
+        <tr><td>Branch circuit</td><td>3%</td></tr>
+        <tr><td>Feeder + branch combined</td><td>5%</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details class="panel">
+    <summary>Reference: wire gauge circular mils <span class="chevron">▾</span></summary>
+    <div class="table-wrap">
+      <table id="gaugeTable"></table>
+    </div>
+  </details>
+
+  <div class="panel" id="faq">
+    <h2 style="font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:1.3rem;margin-bottom:0.9rem;">Voltage drop, explained</h2>
+    <p style="color:var(--text-dim);font-size:0.92rem;line-height:1.6;margin-bottom:0.9rem;">Voltage drop is the loss of voltage along a conductor as current travels through it — longer runs and smaller wire both increase it. Too much drop means motors run hot, lights dim, and equipment underperforms, even if the circuit is otherwise correctly rated.</p>
+    <p style="color:var(--text-dim);font-size:0.92rem;line-height:1.6;margin-bottom:0.9rem;">The NEC doesn't make voltage drop a hard code violation in most residential and commercial branch circuits, but it recommends staying under 3% for a branch circuit and 5% total for feeder plus branch combined — the two figures this tool checks your run against.</p>
+    <p style="color:var(--text-dim);font-size:0.92rem;line-height:1.6;">If your run fails, the fix is almost always to move up one or two wire sizes, shorten the run, or split a long run with a junction closer to the load.</p>
+  </div>
+
+</main>
+
+<footer>
+  Calculated using the NEC Chapter 9, Table 8 method: VD = (2 × K × I × D) ⁄ CM for single-phase, and VD = (1.732 × K × I × D) ⁄ CM for three-phase, where K is 12.9 Ω·cmil/ft for copper and 21.2 Ω·cmil/ft for aluminum. This is a planning estimate — verify against local code and actual conditions before final sizing.
+</footer>
+
+<script>
+  // AWG / kcmil to circular mils (NEC Chapter 9, Table 8)
+  const wireData = [
+    { label: "14 AWG", cm: 4110 },
+    { label: "12 AWG", cm: 6530 },
+    { label: "10 AWG", cm: 10380 },
+    { label: "8 AWG", cm: 16510 },
+    { label: "6 AWG", cm: 26240 },
+    { label: "4 AWG", cm: 41740 },
+    { label: "3 AWG", cm: 52620 },
+    { label: "2 AWG", cm: 66360 },
+    { label: "1 AWG", cm: 83690 },
+    { label: "1/0 AWG", cm: 105600 },
+    { label: "2/0 AWG", cm: 133100 },
+    { label: "3/0 AWG", cm: 167800 },
+    { label: "4/0 AWG", cm: 211600 },
+    { label: "250 kcmil", cm: 250000 },
+    { label: "300 kcmil", cm: 300000 },
+    { label: "350 kcmil", cm: 350000 },
+    { label: "400 kcmil", cm: 400000 },
+    { label: "500 kcmil", cm: 500000 },
+  ];
+
+  const K = { copper: 12.9, aluminum: 21.2 };
+
+  const gaugeSelect = document.getElementById('gauge');
+  wireData.forEach((w, i) => {
+    const opt = document.createElement('option');
+    opt.value = w.cm;
+    opt.textContent = w.label;
+    if (w.label === "12 AWG") opt.selected = true;
+    gaugeSelect.appendChild(opt);
+  });
+
+  // Build reference table
+  const gaugeTable = document.getElementById('gaugeTable');
+  let tableHtml = '<tr><th>Size</th><th>Circular mils</th></tr>';
+  wireData.forEach(w => {
+    tableHtml += `<tr><td>${w.label}</td><td>${w.cm.toLocaleString()}</td></tr>`;
+  });
+  gaugeTable.innerHTML = tableHtml;
+
+  let phase = 1;
+  const phaseToggle = document.getElementById('phaseToggle');
+  phaseToggle.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      phaseToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      phase = parseInt(btn.dataset.phase);
+      calculate();
+    });
+  });
+
+  const materialSelect = document.getElementById('material');
+  const voltageInput = document.getElementById('voltage');
+  const ampsInput = document.getElementById('amps');
+  const distanceInput = document.getElementById('distance');
+
+  [materialSelect, gaugeSelect, voltageInput, ampsInput, distanceInput].forEach(el => {
+    el.addEventListener('input', calculate);
+    el.addEventListener('change', calculate);
+  });
+
+  function findNextSize(currentCM, targetVD, k, factor, amps, distance) {
+    for (const w of wireData) {
+      if (w.cm <= currentCM) continue;
+      const vd = (factor * k * amps * distance) / w.cm;
+      const voltage = parseFloat(voltageInput.value) || 1;
+      const pct = (vd / voltage) * 100;
+      if (pct <= targetVD) return w.label;
+    }
+    return null;
+  }
+
+  function calculate() {
+    const cm = parseFloat(gaugeSelect.value);
+    const material = materialSelect.value;
+    const voltage = parseFloat(voltageInput.value) || 0;
+    const amps = parseFloat(ampsInput.value) || 0;
+    const distance = parseFloat(distanceInput.value) || 0;
+    const k = K[material];
+    const factor = phase === 1 ? 2 : 1.732;
+
+    const vdVolts = (factor * k * amps * distance) / cm;
+    const vdPercent = voltage > 0 ? (vdVolts / voltage) * 100 : 0;
+    const vAtLoad = voltage - vdVolts;
+
+    document.getElementById('vdPercent').textContent = vdPercent.toFixed(1);
+    document.getElementById('vdVolts').textContent = vdVolts.toFixed(1) + ' V';
+    document.getElementById('vAtLoad').textContent = vAtLoad.toFixed(1) + ' V';
+
+    const panel = document.getElementById('resultPanel');
+    const badge = document.getElementById('badge');
+    const badgeText = document.getElementById('badgeText');
+    const suggestion = document.getElementById('suggestion');
+
+    panel.classList.remove('pass', 'warn', 'fail');
+
+    if (vdPercent <= 3) {
+      panel.classList.add('pass');
+      badge.className = 'badge pass';
+      badgeText.textContent = 'Within 3%';
+      suggestion.innerHTML = `<strong>${gaugeSelect.options[gaugeSelect.selectedIndex].text}</strong> is sized well for this run — voltage drop is within the recommended branch circuit limit.`;
+    } else if (vdPercent <= 5) {
+      panel.classList.add('warn');
+      badge.className = 'badge warn';
+      badgeText.textContent = 'Within 5%';
+      suggestion.innerHTML = `Over the 3% branch circuit guideline, but within the 5% combined feeder + branch limit. Consider upsizing if this is a standalone branch circuit.`;
+    } else {
+      panel.classList.add('fail');
+      badge.className = 'badge fail';
+      badgeText.textContent = 'Exceeds 5%';
+      const next = findNextSize(cm, 3, k, factor, amps, distance);
+      suggestion.innerHTML = next
+        ? `Voltage drop is too high for this run. Try <strong>${next}</strong> or larger to bring it back under 3%.`
+        : `Voltage drop is too high for this run, even at the largest size listed. Consider reducing distance, splitting the run, or increasing voltage.`;
+    }
+  }
+
+  calculate();
+</script>
+
+</body>
+</html>
